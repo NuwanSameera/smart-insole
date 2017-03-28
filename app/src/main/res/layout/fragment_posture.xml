@@ -1,31 +1,111 @@
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="uom.synergen.fyp.smart_insole.gait_analysis.PostureFragment"
     android:background="@drawable/background">
+
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Posture Variation"
+        android:text="Are You Active"
         android:id="@+id/textView2"
-        android:layout_gravity="center_horizontal|top" />
+        android:layout_alignParentTop="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="46dp" />
 
-    <ImageView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/posture"
-        android:src="@drawable/posture"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/textView"
-        android:layout_gravity="center_horizontal|top" />
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Speed"
+        android:id="@+id/textView4"
+        android:layout_marginTop="54dp"
+        android:layout_below="@+id/textView2"
+        android:layout_marginStart="66dp" />
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0"
+        android:id="@+id/speedText"
+        android:layout_above="@+id/textView6"
+        android:layout_alignStart="@+id/strideLengthText" />
 
-</FrameLayout>
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Stride Length"
+        android:id="@+id/textView6"
+        android:layout_marginTop="48dp"
+        android:layout_below="@+id/textView4"
+        android:layout_alignStart="@+id/textView4" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0"
+        android:id="@+id/strideLengthText"
+        android:layout_above="@+id/textView11"
+        android:layout_toEndOf="@+id/stepCountText" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Step Count"
+        android:id="@+id/textView11"
+        android:layout_marginTop="83dp"
+        android:layout_below="@+id/textView6"
+        android:layout_alignEnd="@+id/textView4" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0"
+        android:id="@+id/stepCountText"
+        android:layout_above="@+id/textView13"
+        android:layout_toEndOf="@+id/textView6" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reset"
+        android:id="@+id/stepCountResetButton"
+        android:layout_above="@+id/textView13"
+        android:layout_alignStart="@+id/calaryBurnedButton" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="Calary Burned"
+        android:id="@+id/textView13"
+        android:layout_marginTop="52dp"
+        android:layout_below="@+id/textView11"
+        android:layout_alignStart="@+id/textView11" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:text="0"
+        android:id="@+id/calaryBurnedText"
+        android:layout_alignTop="@+id/textView13"
+        android:layout_alignStart="@+id/stepCountText" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Reset"
+        android:id="@+id/calaryBurnedButton"
+        android:layout_alignBottom="@+id/calaryBurnedText"
+        android:layout_alignParentEnd="true" />
+</RelativeLayout>

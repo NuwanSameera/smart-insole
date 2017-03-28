@@ -1,12 +1,14 @@
 package uom.synergen.fyp.smart_insole.gait_analysis;
 
+import android.Manifest;
+import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.Fragment;
 import android.app.FragmentManager;
-import android.bluetooth.BluetoothDevice;
-import android.bluetooth.BluetoothGattCharacteristic;
-import android.location.Location;
-import android.location.LocationListener;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Environment;
+import android.support.annotation.NonNull;
 import android.support.v13.app.FragmentPagerAdapter;
 import android.support.v4.view.ViewPager;
 import android.os.Bundle;
@@ -14,10 +16,20 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
-import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
-import uom.synergen.fyp.smart_insole.gait_analysis.ble.BluetoothLeUart;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
+import java.util.Arrays;
 
-public class MainActivity extends Activity implements BluetoothLeUart.Callback, LocationListener {
+import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
+import uom.synergen.fyp.smart_insole.gait_analysis.wifi.WifiHandler;
+
+public class MainActivity extends Activity {
 
     private static final String TAG = "Main Activity";
 
@@ -28,10 +40,21 @@ public class MainActivity extends Activity implements BluetoothLeUart.Callback, 
     private PressureFragment pressureFragment;
     private PostureFragment postureFragment;
 
-    private static StringBuilder leg1Received;
-    private static StringBuilder leg2Received;
+    private BufferedReader[] clientReaders;
 
-    private BluetoothLeUart uart;
+    private File externalDirectory;
+    private File leftDataFile;
+    private File rightDataFile;
+
+    private FileOutputStream leftOutputStream;
+    private OutputStreamWriter leftWriter;
+
+    private FileOutputStream rightOutputStream;
+    private OutputStreamWriter rightWriter;
+
+    private byte i;
+
+    private static final int REQUEST_PERMISSIONS = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,21 +68,94 @@ public class MainActivity extends Activity implements BluetoothLeUart.Callback, 
         mViewPager = (ViewPager) findViewById(R.id.container);
         mViewPager.setAdapter(mSectionsPagerAdapter);
 
-        uart = BluetoothLeUart.getInstanse(this);
-        uart.registerCallback(this);
+        //Create Wifi connections
+        try {
 
-    }
+            final Socket[] clients = WifiHandler.getInstance().getClients();
+            clientReaders = new BufferedReader[2];
 
-    @Override
-    protected void onPause() {
-        super.onPause();
-        uart.registerCallback(this);
-    }
+            for (int i = 0 ; i < 2 ; i++) {
+                clientReaders[i] = new BufferedReader(new InputStreamReader
+                        (clients[i].getInputStream()));
+            }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        uart.unregisterCallback(this);
+            new Thread() {
+                @Override
+                public void run() {
+                    while (true) {
+                        try {
+                            String receivedMessage = clientReaders[0].readLine();
+                            processMessage(receivedMessage);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }.start();
+
+            new Thread() {
+
+                @Override
+
+                public void run() {
+                    while (true) {
+                        try {
+                            String receivedMessage = clientReaders[1].readLine();
+                            processMessage(receivedMessage);
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }.start();
+
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        requestPermissionIfNeeded();
+
+        externalDirectory = Environment.getExternalStorageDirectory();
+
+        Log.i(TAG, externalDirectory.getAbsolutePath());
+
+        leftDataFile = new File(externalDirectory,"Left.txt");
+
+        if(!leftDataFile.exists()) {
+            try {
+                leftDataFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+
+
+        try {
+            leftOutputStream = new FileOutputStream(leftDataFile);
+            leftWriter = new OutputStreamWriter(leftOutputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+        rightDataFile = new File(externalDirectory,"Right.txt");
+
+        if(!rightDataFile.exists()) {
+            try {
+                rightDataFile.createNewFile();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        try {
+            rightOutputStream = new FileOutputStream(rightDataFile);
+            rightWriter = new OutputStreamWriter(rightOutputStream);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -84,34 +180,6 @@ public class MainActivity extends Activity implements BluetoothLeUart.Callback, 
         return super.onOptionsItemSelected(item);
     }
 
-    //GPS coordinates listener starts
-    @Override
-    public void onLocationChanged(Location location) {
-
-        double longitude = location.getLongitude();
-        double latitude = location.getLatitude();
-
-        Log.i(TAG, "Longitude : " + longitude + " Latitude : " + latitude);
-
-    }
-
-    @Override
-    public void onStatusChanged(String provider, int status, Bundle extras) {
-
-    }
-
-    @Override
-    public void onProviderEnabled(String provider) {
-
-    }
-
-    @Override
-    public void onProviderDisabled(String provider) {
-
-    }
-
-    //GPS coordinates listener ends
-
     /**
      * A {@link FragmentPagerAdapter} that returns a fragment corresponding to
      * one of the sections/tabs/pages.
@@ -133,6 +201,7 @@ public class MainActivity extends Activity implements BluetoothLeUart.Callback, 
 
                 case 1 :postureFragment = PostureFragment.newInstance(1);
                         return postureFragment;
+
             }
             return null;
         }
@@ -157,77 +226,121 @@ public class MainActivity extends Activity implements BluetoothLeUart.Callback, 
         }
     }
 
-
-    @Override
-    public void onConnected(BluetoothLeUart uart) {
-
-    }
-
-    @Override
-    public void onConnectFailed(BluetoothLeUart uart) {
-
-    }
-
-    @Override
-    public void onDisconnected(BluetoothLeUart uart) {
-
-    }
-
-    @Override
-    public void onReceiveLeg1(BluetoothLeUart uart, BluetoothGattCharacteristic rx) {
+    private void processMessage (String message) {
 
         try{
 
-            if(leg1Received == null) {
-                leg1Received = new StringBuilder();
+            if(message.startsWith("{") && message.endsWith("{")) {
+                getReadings(message.substring(1, message.length()-1));
+            } else {
+
+                String[] dataMap = message.split("\\{");
+
+                if(dataMap.length > 1) {
+                    for (String data : dataMap) {
+                        getReadings(data);
+                    }
+                }
             }
 
-            String received = rx.getStringValue(0);
+        }catch (Exception e){
 
-            if(!received.endsWith("}")) {
-                leg1Received.append(received);
-            }else {
-                leg1Received.append(received);
-                String message = leg1Received.toString();
-                message = message.substring(0,message.length()-2);
-                pressureFragment.processMessage(message);
-                postureFragment.processMessage(message);
-                leg1Received = null;
+        }
+
+    }
+
+    private void getReadings(String message) {
+
+        String[] receivedData = message.split(",");
+
+        if (receivedData.length > 1) {
+            String leg = receivedData[0];
+
+            double time = Double.parseDouble(receivedData[17]);
+
+            short[] pressureData = new short[16];
+
+            for (i = 0; i < 16; i++) {
+                short x = (short)(Short.parseShort(receivedData[i + 1]) * 2 - 30);
+                pressureData[i] = (x < 0) ? 0 : x;
             }
-        }catch (Exception ex) {
-            Log.e(TAG,"Error.");
-            leg1Received = null;
+
+            double[] accelerometerData = new double[3];
+
+            for (i = 0; i < 3; i++) {
+                accelerometerData[i] = Double.parseDouble(receivedData[i + 18]) / 10;
+            }
+
+            short[] gyroscopeData = new short[3];
+
+            for (i = 0; i < 3; i++) {
+                gyroscopeData[i] = Short.parseShort(receivedData[i + 21]);
+            }
+
+            String outputString = time + Arrays.toString(pressureData) +
+                    Arrays.toString(accelerometerData) + Arrays.toString(gyroscopeData) + "\n";
+
+            outputString = outputString.replace("[",",");
+            outputString = outputString.replace("]", "");
+            outputString = outputString.replace(" ", "");
+
+            if (leg.equals("0")) {
+                try {
+                    leftWriter.append(outputString);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                try {
+                    rightWriter.append(outputString);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            pressureFragment.processMessage(leg,pressureData);
+            postureFragment.processData(leg, time, accelerometerData, gyroscopeData , pressureData);
+
+        }
+    }
+
+    // region Permissions
+    @TargetApi(Build.VERSION_CODES.M)
+    private void requestPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android M Permission check 
+            if (this.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED &&
+                    this.checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED &&
+                    this.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                            != PackageManager.PERMISSION_GRANTED &&
+                    this.checkSelfPermission(Manifest.permission.SEND_SMS)
+                            != PackageManager.PERMISSION_GRANTED) {
+
+                Log.i(TAG, "No Permission");
+
+                String [] permissions = new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                        Manifest.permission.ACCESS_COARSE_LOCATION,
+                        Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.SEND_SMS};
+
+                requestPermissions(permissions, REQUEST_PERMISSIONS);
+            }
         }
     }
 
     @Override
-    public void onReceiveLeg2(BluetoothLeUart uart, BluetoothGattCharacteristic rx) {
-        try{
-            if(leg2Received == null) {
-                leg2Received = new StringBuilder();
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case REQUEST_PERMISSIONS: {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    Log.i(TAG, "Permission Gained..");
+                } else {
+                }
+                break;
             }
-
-            String received = rx.getStringValue(0);
-
-            if(!received.endsWith("}")) {
-                leg2Received.append(received);
-            }else {
-                leg2Received.append(received);
-                String message = leg2Received.toString();
-                message = message.substring(0,message.length()-2);
-                pressureFragment.processMessage(message);
-                postureFragment.processMessage(message);
-                leg2Received = null;
-            }
-        }catch (Exception ex) {
-            Log.e(TAG, "Error. " + ex);
-            leg2Received = null;
+            default:
+                break;
         }
     }
-
-    @Override
-    public void onDeviceFound(BluetoothDevice device) {
-
-    }
-
 }

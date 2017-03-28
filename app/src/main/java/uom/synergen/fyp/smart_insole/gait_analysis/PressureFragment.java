@@ -7,10 +7,13 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import java.util.Arrays;
 
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
 import uom.synergen.fyp.smart_insole.gait_analysis.constants.SmartInsoleConstants;
@@ -22,9 +25,9 @@ public class PressureFragment extends Fragment {
     private ImageView footPressureView;
     private Bitmap bitmap;
 
-    int [][] leftLegPressurePoints;
+    short [][] leftLegPressurePoints;
 
-    int [][] rightLegPressurePonts;
+    short [][] rightLegPressurePonts;
 
     private static final String ARG_SECTION_NUMBER = "section_number";
 
@@ -53,73 +56,71 @@ public class PressureFragment extends Fragment {
         return rootView;
     }
 
-    public void processMessage(String receivedMessage) {
+    public void processMessage(String leg, short []pressureData) {
 
-        String []message = receivedMessage.split(":");
-        String leg = message[0];
-        int[] sensorData = new int[16];
-
-        for (int i = 0; i < 15 ; i++) {
-            sensorData[i] = Integer.parseInt(message[i + 1]);
+        if(leg.equals("0")) {
+            colourFoot(leftLegPressurePoints, pressureData);
+        } else {
+            colourFoot(rightLegPressurePonts, pressureData);
         }
 
+    }
+
+    private void colourFoot(short [][] pressurePoints, short[] pressureValues) {
+
+//        int forceDistanceProductSumX = 0;
+//        int forceDistanceProductSumY = 0;
+
+//        int forceSum = 0;
+
         final Bitmap newBmp = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(),
-                    Bitmap.Config.ARGB_8888);
+                Bitmap.Config.ARGB_8888);
         // Create a canvas  for new bitmap
         Canvas c = new Canvas(newBmp);
 
         // Draw your old bitmap on it.
         c.drawBitmap(bitmap, 0, 0, new Paint());
 
-        if(leg.equals("0")) {
-            for(int k = 0 ; k < 15 ; k++) {
+        Paint paint = new Paint();                          //define paint and paint color
 
-                for(int i = -2 ; i <= 2 ; i ++) {
-                    for(int j = -2 ; j <= 2 ; j++) {
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setAntiAlias(true);
 
-                        if(sensorData[k] > 50) {
-                            newBmp.setPixel(2 * leftLegPressurePoints[k][0] + i, 2 * leftLegPressurePoints[k][1] + j, Color.RED);
-                        } else {
-                            newBmp.setPixel(2 * leftLegPressurePoints[k][0] + i, 2 * leftLegPressurePoints[k][1] + j, Color.BLUE);
-                        }
-                    }
-                }
+        for(int k = 0 ; k < 16 ; k++) {
+             for(int i = 0 ; i <= 20 ; i ++) {
+
+                 if(pressureValues[k] > 25) {
+                     paint.setColor(Color.rgb(255 - i , 0,0));
+                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,i,paint);
+                 } else {
+                     paint.setColor(Color.rgb(0, 255 - i * 20,0));
+                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,i,paint);
+                 }
+
             }
 
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    footPressureView.setImageBitmap(newBmp);
-                    bitmap = newBmp;
-                }
-            });
-
-        }else if (leg.equals("1")) {
-
-            for(int k = 0 ; k < 15 ; k++) {
-
-                for(int i = -2 ; i <= 2 ; i ++) {
-                    for(int j = -2 ; j <= 2 ; j++) {
-
-                        if(sensorData[k] > 50) {
-                            newBmp.setPixel(2 * rightLegPressurePonts[k][0] + i, 2 * rightLegPressurePonts[k][1] + j , Color.RED);
-                        } else {
-                            newBmp.setPixel(2 * rightLegPressurePonts[k][0] + i, 2 * rightLegPressurePonts[k][1] + j , Color.BLUE);
-                        }
-                    }
-                }
-            }
-
-            getActivity().runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    footPressureView.setImageBitmap(newBmp);
-                    bitmap = newBmp;
-                }
-            });
+//            forceDistanceProductSumX += pressureValues[k] * pressurePoints[k][0];
+//            forceDistanceProductSumY += pressureValues[k] * pressurePoints[k][1];
+//            forceSum += pressureValues[k];
 
         }
 
+//        int centerOfPressureX = forceDistanceProductSumX / forceSum;
+//        int centerOfPressureY = forceDistanceProductSumY / forceSum;
+//
+//        for (int i = -5; i <= 5; i++) {
+//             for (int j = -5; j <= 5; j++) {
+//                  newBmp.setPixel(2 * centerOfPressureX + i, 2 * centerOfPressureY + j, Color.GRAY);
+//             }
+//        }
+
+        getActivity().runOnUiThread(new Runnable() {
+             @Override
+             public void run() {
+                  footPressureView.setImageBitmap(newBmp);
+                  bitmap = newBmp;
+             }
+        });
     }
 
 }
