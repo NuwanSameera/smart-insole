@@ -1,6 +1,5 @@
 package uom.synergen.fyp.smart_insole.gait_analysis;
 
-import android.app.AlertDialog;
 import android.app.Fragment;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -15,10 +14,13 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import java.util.Arrays;
 
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
 import uom.synergen.fyp.smart_insole.gait_analysis.constants.SmartInsoleConstants;
+import uom.synergen.fyp.smart_insole.gait_analysis.mqtt.MqttConnector;
 
 public class PressureFragment extends Fragment {
 
@@ -38,6 +40,8 @@ public class PressureFragment extends Fragment {
     private short count;
 
     private TextView titleText;
+
+    private MqttConnector mqttConnector;
 
     public PressureFragment() {
 
@@ -63,6 +67,8 @@ public class PressureFragment extends Fragment {
         bitmap = ((BitmapDrawable)footPressureView.getDrawable()).getBitmap();
 
         titleText = (TextView) rootView.findViewById(R.id.titleTextView);
+
+        mqttConnector = MqttConnector.getInstance(getActivity());
 
         return rootView;
     }
@@ -101,6 +107,17 @@ public class PressureFragment extends Fragment {
                 colourFoot(leftLegPressurePoints, pressureData);
             } else {
                 colourFoot(rightLegPressurePonts, pressureData);
+            }
+
+            String payload = leg + "," + Arrays.toString(pressureData);
+            payload = payload.replace("[", ",");
+            payload = payload.replace("]", "");
+            payload = payload.replace(" ", "");
+
+            try {
+                mqttConnector.publish(SmartInsoleConstants.MQTT_SERVER_TOPIC, payload);
+            } catch (MqttException e) {
+                e.printStackTrace();
             }
 
         }

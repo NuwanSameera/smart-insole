@@ -8,9 +8,9 @@ public class SmartInsoleConstants {
     public static final short [][] RIGHT_LEG_PRESSURE_POINTS = {{261,164},{294,161},{322,166},{345,183},{369,204},
             {265,263},{299,244},{326,252},{347,266},{367,292},{365,330},{361,374},{351,443},{301,469},{331,528},{297,385}};
 
-    public static final String DB_URL = "jdbc:mysql://192.168.8.100:3306/SmartInsole";
-    public static final String DB_USER = "root";
-    public static final String DB_PASSWORD = "nuwan";
+    public static final String MQTT_URL = "tcp://smartinsole.projects.mrt.ac.lk:1883";
+    public static final String MQTT_USER = "smart_insole_android_app";
+    public static final String MQTT_SERVER_TOPIC = "smart_insole_server";
 
     public static final String CARE_GIVER_PHONE_NUMBER = "";
     public static final String fallDetectMessage = "Person Falling";

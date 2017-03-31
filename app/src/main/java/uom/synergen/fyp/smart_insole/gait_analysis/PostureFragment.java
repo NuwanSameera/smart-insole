@@ -27,8 +27,11 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.TextView;
 
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
 import uom.synergen.fyp.smart_insole.gait_analysis.constants.SmartInsoleConstants;
+import uom.synergen.fyp.smart_insole.gait_analysis.mqtt.MqttConnector;
 
 public class PostureFragment extends Fragment {
 
@@ -66,6 +69,8 @@ public class PostureFragment extends Fragment {
     private static final int REQUEST_PERMISSIONS = 1;
     private LocationManager locationManager;
     private String locationProvider;
+
+    private MqttConnector mqttConnector;
 
     public PostureFragment() {
         // Required empty public constructor
@@ -127,6 +132,8 @@ public class PostureFragment extends Fragment {
 
         requestLocationPermissionIfNeeded();
         locationBegin();
+
+        mqttConnector = MqttConnector.getInstance(rootView.getContext());
 
         return rootView;
 
@@ -235,6 +242,12 @@ public class PostureFragment extends Fragment {
                 @Override
                 public void run() {
                     stepCountText.setText(String.valueOf(stepCount[0] + stepCount[1]));
+                    try {
+                        mqttConnector.publish(SmartInsoleConstants.MQTT_SERVER_TOPIC ,
+                                stepCount[0] + stepCount[1] +"");
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
 

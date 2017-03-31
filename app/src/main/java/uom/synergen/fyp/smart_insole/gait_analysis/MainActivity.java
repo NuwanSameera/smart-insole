@@ -16,6 +16,12 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 
+import org.eclipse.paho.android.service.MqttAndroidClient;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttToken;
+import org.eclipse.paho.client.mqttv3.MqttClient;
+import org.eclipse.paho.client.mqttv3.MqttException;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -27,6 +33,8 @@ import java.net.Socket;
 import java.util.Arrays;
 
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
+import uom.synergen.fyp.smart_insole.gait_analysis.constants.SmartInsoleConstants;
+import uom.synergen.fyp.smart_insole.gait_analysis.mqtt.MqttConnector;
 import uom.synergen.fyp.smart_insole.gait_analysis.wifi.WifiHandler;
 
 public class MainActivity extends Activity {
@@ -55,6 +63,8 @@ public class MainActivity extends Activity {
     private byte i;
 
     private static final int REQUEST_PERMISSIONS = 1;
+
+    boolean connected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -156,6 +166,15 @@ public class MainActivity extends Activity {
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
+
+        //MQTT Connection
+        MqttConnector mqttConnector = MqttConnector.getInstance(this);
+        try {
+            mqttConnector.connect();
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
