@@ -1,5 +1,6 @@
 package uom.synergen.fyp.smart_insole.gait_analysis;
 
+import android.app.AlertDialog;
 import android.app.Fragment;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -12,6 +13,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+import android.widget.TextView;
 
 import java.util.Arrays;
 
@@ -30,6 +32,12 @@ public class PressureFragment extends Fragment {
     short [][] rightLegPressurePonts;
 
     private static final String ARG_SECTION_NUMBER = "section_number";
+
+    private int pressureSum = 0;
+    private byte i;
+    private short count;
+
+    private TextView titleText;
 
     public PressureFragment() {
 
@@ -53,15 +61,48 @@ public class PressureFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_pressure, container, false);
         footPressureView = (ImageView) rootView.findViewById(R.id.footPressure);
         bitmap = ((BitmapDrawable)footPressureView.getDrawable()).getBitmap();
+
+        titleText = (TextView) rootView.findViewById(R.id.titleTextView);
+
         return rootView;
     }
 
     public void processMessage(String leg, short []pressureData) {
 
-        if(leg.equals("0")) {
-            colourFoot(leftLegPressurePoints, pressureData);
-        } else {
-            colourFoot(rightLegPressurePonts, pressureData);
+        if(count == 0) {
+            footPressureView.setImageResource(R.drawable.wait);
+        }
+
+        if(count < 200) {
+
+            for (i = 0 ; i < 16; i++) {
+                pressureSum += pressureData[i];
+            }
+
+            count ++;
+
+        } else if(count == 200) {
+
+            pressureSum = pressureSum / 200;
+
+            Log.i(TAG, pressureSum + "");
+            count ++;
+
+            getActivity().runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    titleText.setText(pressureSum + "");
+                }
+            });
+
+        }else {
+
+            if(leg.equals("0")) {
+                colourFoot(leftLegPressurePoints, pressureData);
+            } else {
+                colourFoot(rightLegPressurePonts, pressureData);
+            }
+
         }
 
     }
@@ -82,22 +123,21 @@ public class PressureFragment extends Fragment {
         c.drawBitmap(bitmap, 0, 0, new Paint());
 
         Paint paint = new Paint();                          //define paint and paint color
-
-        paint.setStyle(Paint.Style.STROKE);
+        paint.setStyle(Paint.Style.FILL);
         paint.setAntiAlias(true);
 
         for(int k = 0 ; k < 16 ; k++) {
-             for(int i = 0 ; i <= 20 ; i ++) {
+//             for(int i = 0 ; i <= 20 ; i ++) {
 
-                 if(pressureValues[k] > 25) {
-                     paint.setColor(Color.rgb(255 - i , 0,0));
-                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,i,paint);
+                 if(pressureValues[k] > 100) {
+                     paint.setColor(Color.RED);
+                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,20,paint);
                  } else {
-                     paint.setColor(Color.rgb(0, 255 - i * 20,0));
-                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,i,paint);
+                     paint.setColor(Color.GREEN);
+                     c.drawCircle(pressurePoints[k][0] * 2 , pressurePoints[k][1] * 2 ,20,paint);
                  }
 
-            }
+            //}
 
 //            forceDistanceProductSumX += pressureValues[k] * pressurePoints[k][0];
 //            forceDistanceProductSumY += pressureValues[k] * pressurePoints[k][1];

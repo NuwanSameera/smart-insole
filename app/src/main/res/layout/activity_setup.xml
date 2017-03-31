@@ -7,26 +7,23 @@
     android:paddingLeft="@dimen/activity_horizontal_margin"
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin"
-    tools:context="uom.synergen.fyp.smart_insole.gait_analysis.PressureFragment"
+    tools:context="uom.synergen.fyp.smart_insole.gait_analysis.SetupActivity"
     android:background="@drawable/background">
 
-
     <ImageView
-        android:layout_width="fill_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/footPressure"
-        android:src="@drawable/placement"
-        android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/titleTextView" />
-
-    <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Pressure Variation"
-        android:id="@+id/titleTextView"
-        android:layout_alignParentTop="true"
+        android:id="@+id/imageView"
+        android:src="@drawable/posture"
         android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Continue"
+        android:id="@+id/continueButton"
+        android:layout_alignBottom="@+id/imageView"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"/>
 
 </RelativeLayout>

@@ -6,16 +6,19 @@ import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.location.Criteria;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.MediaPlayer;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.telephony.SmsManager;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -61,6 +64,8 @@ public class PostureFragment extends Fragment {
     private double fallDetectionTime[];
 
     private static final int REQUEST_PERMISSIONS = 1;
+    private LocationManager locationManager;
+    private String locationProvider;
 
     public PostureFragment() {
         // Required empty public constructor
@@ -117,6 +122,11 @@ public class PostureFragment extends Fragment {
         count = new byte[2];
         fallTime = new double[2];
         fallDetectionTime = new double[2];
+
+        //Location Begin
+
+        requestLocationPermissionIfNeeded();
+        locationBegin();
 
         return rootView;
 
@@ -285,41 +295,12 @@ public class PostureFragment extends Fragment {
                         mp.start();
 
                         //Send Location to Server
-                        LocationManager locationManager = (LocationManager) getActivity().
-                                getSystemService(Context.LOCATION_SERVICE);
-                        Criteria criteria = new Criteria();
-                        String provider = locationManager.getBestProvider(criteria, false);
-
-                        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)
-                                != PackageManager.PERMISSION_GRANTED &&
-                                getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
-                                        != PackageManager.PERMISSION_GRANTED &&
-                                getActivity().checkSelfPermission(Manifest.permission.SEND_SMS)
-                                        != PackageManager.PERMISSION_GRANTED) {
-
-                            Log.i(TAG, "No Permission");
-
-                            String [] permissions = new String[]{Manifest.permission.ACCESS_COARSE_LOCATION,
-                                    Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.SEND_SMS};
-
-                            getActivity().requestPermissions(permissions, REQUEST_PERMISSIONS);
-                        }
-
-                        Location location = locationManager.getLastKnownLocation(provider);
-
-                        double latitude = location.getLatitude();
-                        double longitude = location.getLongitude();
-
-                        String locationUrl = "https://www.google.com/maps/preview/@"+latitude+","+longitude+",8z";
-                        Log.i("Login", locationUrl);
-
+                        sendLocation();
 
                         //Send SMS to care giver
-                        PendingIntent pi = PendingIntent.getActivity
-                                (getActivity(), 0,new Intent(getActivity(), PostureFragment.class), 0);
-                        SmsManager sms = SmsManager.getDefault();
-                        sms.sendTextMessage(SmartInsoleConstants.CARE_GIVER_PHONE_NUMBER, null, "Person Fall", pi, null);
+                        //sendSms();
 
+                        
                         count[legInt] = 0;
 
                      }
@@ -331,6 +312,157 @@ public class PostureFragment extends Fragment {
         }
 
         preGxValue[legInt] = gyroscopeData[0];
+
+    }
+
+
+    // region Permissions
+    @TargetApi(Build.VERSION_CODES.M)
+    private void requestLocationPermissionIfNeeded() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            // Android M Permission check 
+            if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                    != PackageManager.PERMISSION_GRANTED) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setTitle("This app needs location access");
+                builder.setMessage("Please grant location access to get GPS Location");
+                builder.setPositiveButton(android.R.string.ok, null);
+                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    public void onDismiss(DialogInterface dialog) {
+                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 1);
+                    }
+                });
+                builder.show();
+            }
+
+            if(getActivity().checkSelfPermission(Manifest.permission.SEND_SMS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                builder.setTitle("This app needs send SMS permission");
+                builder.setMessage("Please grant send SMS permission to send falling message");
+                builder.setPositiveButton(android.R.string.ok, null);
+                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                    public void onDismiss(DialogInterface dialog) {
+                        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, 2);
+                    }
+                });
+                builder.show();
+
+            }
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
+        switch (requestCode) {
+            case 1: {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                    builder.setMessage("Location access has not been granted");
+                    builder.setPositiveButton(android.R.string.ok, null);
+                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                        @Override
+                        public void onDismiss(DialogInterface dialog) {
+                        }
+
+                    });
+                    builder.show();
+                }
+                break;
+            }
+
+            case  2: {
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                } else {
+                    final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+                    builder.setMessage("SMS permission has not been granted");
+                    builder.setPositiveButton(android.R.string.ok, null);
+                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+
+                        @Override
+                        public void onDismiss(DialogInterface dialog) {
+                        }
+
+                    });
+                    builder.show();
+                }
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+
+    @TargetApi(Build.VERSION_CODES.M)
+    private void locationBegin() {
+        locationProvider = LocationManager.GPS_PROVIDER;
+        locationManager = (LocationManager) getActivity().getSystemService(Context.LOCATION_SERVICE);
+
+        if(!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER )) {
+            locationProvider = LocationManager.NETWORK_PROVIDER;
+        }
+
+        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            String [] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+            requestPermissions(permissions, 1);
+
+        }
+
+        LocationListener listener = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle extras) {
+
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+
+            }
+        };
+
+        locationManager.requestLocationUpdates(locationProvider, 0, 0, listener);
+    }
+
+    @TargetApi(Build.VERSION_CODES.M)
+    private void sendLocation() {
+
+        if (getActivity().checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            String [] permissions = new String[]{Manifest.permission.ACCESS_FINE_LOCATION};
+            requestPermissions(permissions, 1);
+        }
+
+        Location location = locationManager.getLastKnownLocation(locationProvider);
+        final double latitude = location.getLatitude();
+        final double longitude = location.getLongitude();
+
+        String locationUrl = "https://www.google.com/maps/preview/@" + latitude + "," + longitude +
+                ",17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d"+latitude+"!4d" + longitude;
+        Log.i("Login", locationUrl);
+
+    }
+
+    private void sendSms() {
+        PendingIntent pi = PendingIntent.getActivity
+                (getActivity(), 0,new Intent(getActivity(), PostureFragment.class), 0);
+        SmsManager sms = SmsManager.getDefault();
+        sms.sendTextMessage(SmartInsoleConstants.CARE_GIVER_PHONE_NUMBER, null, "Person Fall", pi, null);
 
     }
 
