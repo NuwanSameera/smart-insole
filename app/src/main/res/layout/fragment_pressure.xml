@@ -17,16 +17,28 @@
         android:id="@+id/footPressure"
         android:src="@drawable/placement"
         android:layout_alignParentBottom="true"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/titleTextView" />
+        android:layout_alignParentStart="true" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:textAppearance="?android:attr/textAppearanceLarge"
-        android:text="Pressure Variation"
-        android:id="@+id/titleTextView"
-        android:layout_alignParentTop="true"
-        android:layout_centerHorizontal="true" />
+        android:background="#808080"
+        android:minHeight="35dp"
+        android:minWidth="176dp"
+        android:id="@+id/leftIndicatorTextView"
+        android:layout_alignBottom="@+id/footPressure"
+        android:layout_alignParentStart="true" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="?android:attr/textAppearanceLarge"
+        android:background="#808080"
+        android:minHeight="35dp"
+        android:minWidth="176dp"
+        android:id="@+id/rightIndicatorTextView"
+        android:layout_alignParentBottom="true"
+        android:layout_alignParentEnd="true" />
 
 </RelativeLayout>

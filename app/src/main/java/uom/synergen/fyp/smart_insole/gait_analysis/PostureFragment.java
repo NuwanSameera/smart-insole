@@ -9,7 +9,6 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -20,15 +19,19 @@ import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.telephony.SmsManager;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
+
+import org.eclipse.paho.client.mqttv3.MqttException;
+
+import java.util.Calendar;
 
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
 import uom.synergen.fyp.smart_insole.gait_analysis.constants.SmartInsoleConstants;
+import uom.synergen.fyp.smart_insole.gait_analysis.mqtt.MqttConnector;
 
 public class PostureFragment extends Fragment {
 
@@ -52,10 +55,7 @@ public class PostureFragment extends Fragment {
 
     private TextView stepCountText;
     private TextView speedText;
-    private TextView strideLengthText;
-    private Button stepCountResetButton;
-    private TextView calaryBurnedText;
-    private Button calaryBurnedResetButton;
+
 
     private byte i;
     private byte count[];
@@ -66,6 +66,12 @@ public class PostureFragment extends Fragment {
     private static final int REQUEST_PERMISSIONS = 1;
     private LocationManager locationManager;
     private String locationProvider;
+
+    private MqttConnector mqttConnector;
+
+    private Calendar calendar;
+
+    private ImageView postureImageView;
 
     public PostureFragment() {
         // Required empty public constructor
@@ -86,25 +92,7 @@ public class PostureFragment extends Fragment {
         View rootView = inflater.inflate(R.layout.fragment_posture, container, false);
 
         stepCountText = (TextView) rootView.findViewById(R.id.stepCountText);
-        stepCountResetButton = (Button) rootView.findViewById(R.id.stepCountResetButton);
-        speedText = (TextView) rootView.findViewById(R.id.speedText);
-        strideLengthText = (TextView) rootView.findViewById(R.id.strideLengthText);
-        calaryBurnedText = (TextView) rootView.findViewById(R.id.calaryBurnedText);
-        calaryBurnedResetButton = (Button) rootView.findViewById(R.id.calaryBurnedButton);
-
-        stepCountResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                stepCountResetButtonAction();
-            }
-        });
-
-        calaryBurnedResetButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                calaryBurnedButtonAction();
-            }
-        });
+        postureImageView = (ImageView) rootView.findViewById(R.id.postureImageView);
 
         status = new byte[2];
 
@@ -128,31 +116,10 @@ public class PostureFragment extends Fragment {
         requestLocationPermissionIfNeeded();
         locationBegin();
 
+        mqttConnector = MqttConnector.getInstance(rootView.getContext());
+
         return rootView;
 
-    }
-
-    private void stepCountResetButtonAction() {
-        stepCount[0] = 0;
-        stepCount[1] = 0;
-
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                stepCountText.setText(String.valueOf(stepCount[0] + stepCount[1]));
-                strideLengthText.setText(String.valueOf(stepCount[1]));
-                speedText.setText(String.valueOf(stepCount[0]));
-            }
-        });
-    }
-
-    private void calaryBurnedButtonAction() {
-        getActivity().runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
-                calaryBurnedText.setText("");
-            }
-        });
     }
 
     @TargetApi(Build.VERSION_CODES.M)
@@ -208,10 +175,13 @@ public class PostureFragment extends Fragment {
 
         }
 
+        //Start of cycle
         if (status[legInt] == 1) {
             status[legInt] = 10;
+            postureImageView.setImageResource(R.drawable.walikng);
         }
 
+        //Integration
         if (status[legInt] > 0) {
             if ((time - previousTime[legInt]) > 500) {
                 count[legInt]++;
@@ -224,6 +194,7 @@ public class PostureFragment extends Fragment {
             }
         }
 
+        //End of Cycle
         if (status[legInt] == 7) {
             status[legInt] = 0;
             firstMaxPeak[legInt] = 0;
@@ -231,10 +202,24 @@ public class PostureFragment extends Fragment {
             secondMinPeak[legInt] = 0;
             stepCount[legInt]++;
 
+            postureImageView.setImageResource(R.drawable.standstill);
+
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     stepCountText.setText(String.valueOf(stepCount[0] + stepCount[1]));
+                    try {
+
+                        calendar = Calendar.getInstance();
+                        String payload = "S&" + (stepCount[0] + stepCount[1]) + "&" + calendar.get(Calendar.YEAR) + "&" +
+                                (calendar.get(Calendar.MONTH) + 1) + "&" + calendar.get(Calendar.DAY_OF_MONTH) + "&" +
+                                calendar.get(Calendar.HOUR_OF_DAY);
+
+                        mqttConnector.publish(SmartInsoleConstants.MQTT_SERVER_TOPIC , payload);
+
+                    } catch (MqttException e) {
+                        e.printStackTrace();
+                    }
                 }
             });
 
@@ -285,10 +270,8 @@ public class PostureFragment extends Fragment {
                 getActivity().runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        calaryBurnedText.setText("Person Fall");
 
-                        new AlertDialog.Builder(getActivity()).setMessage("Person Fall.")
-                                .show();
+                        postureImageView.setImageResource(R.drawable.falling);
 
                         Uri notification = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALL);
                         MediaPlayer mp = MediaPlayer.create(getActivity().getApplicationContext(), notification);
@@ -452,10 +435,21 @@ public class PostureFragment extends Fragment {
         final double latitude = location.getLatitude();
         final double longitude = location.getLongitude();
 
-        String locationUrl = "https://www.google.com/maps/preview/@" + latitude + "," + longitude +
-                ",17z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d"+latitude+"!4d" + longitude;
-        Log.i("Login", locationUrl);
+        //String locationUrl = "https://www.google.com/maps/preview/@" + latitude + "," + longitude +
+        //        ",18z/data=!3m1!4b1!4m5!3m4!1s0x0:0x0!8m2!3d"+latitude+"!4d" + longitude;
+        //Log.i("Login", locationUrl);
 
+        calendar = Calendar.getInstance();
+
+        String payload = "F&" + latitude + "&" + longitude +"&" + calendar.get(Calendar.YEAR) + "-" +
+                (calendar.get(Calendar.MONTH) + 1) + "-" + calendar.get(Calendar.DAY_OF_MONTH) + "&" +
+                calendar.get(Calendar.HOUR_OF_DAY) +":" + calendar.get(Calendar.MINUTE);
+
+        try {
+            mqttConnector.publish(SmartInsoleConstants.MQTT_SERVER_TOPIC, payload);
+        } catch (MqttException e) {
+            e.printStackTrace();
+        }
     }
 
     private void sendSms() {
@@ -463,7 +457,6 @@ public class PostureFragment extends Fragment {
                 (getActivity(), 0,new Intent(getActivity(), PostureFragment.class), 0);
         SmsManager sms = SmsManager.getDefault();
         sms.sendTextMessage(SmartInsoleConstants.CARE_GIVER_PHONE_NUMBER, null, "Person Fall", pi, null);
-
     }
 
 }

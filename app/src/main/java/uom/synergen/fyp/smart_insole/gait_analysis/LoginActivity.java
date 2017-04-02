@@ -26,6 +26,10 @@ import android.widget.Button;
 import android.widget.TextView;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 
 import uom.synergen.fyp.smart_insole.gait_analysis.android_agent.R;
 import uom.synergen.fyp.smart_insole.gait_analysis.wifi.WifiHandler;
